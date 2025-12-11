@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AI Weather — Full</title>
+    <style>
+         :root {
+            --accent: #0ea5e9;
+            --muted: #6b7280;
+            --card: #ffffff;
+            --bg: linear-gradient(180deg, #e6f3ff 0%, #ffffff 100%);
+        }
+        
+        * {
+            box-sizing: border-box
+        }
+        
+        body {
+            margin: 0;
+            font-family: Inter, system-ui, Arial, sans-serif;
+            background: var(--bg);
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .wrap {
+            max-width: 1100px;
+            margin: 28px auto;
+            padding: 18px;
+        }
+        
+        header {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 20px
+        }
+        
+        .grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: 1fr 420px;
+        }
+        
+        .column {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 6px 20px rgba(2, 6, 23, 0.06);
+        }
+        
+        .search-row {
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #e6edf3;
+            font-size: 14px
+        }
+        
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            cursor: pointer
+        }
+        
+        .info {
+            margin-top: 12px
+        }
+        
+        .small {
+            font-size: 13px;
+            color: var(--muted)
+        }
+        
+        .two-col {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+        
+        .card-small {
+            flex: 1;
+            min-width: 120px;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 10px
+        }
+        
+        .chat {
+            display: flex;
+            flex-direction: column;
+            height: 520px
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow: auto;
+            padding: 8px;
+            border-radius: 8px;
+            background: #fbfdff;
+            border: 1px solid #eef2f7;
+        }
+        
+        .msg {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 8px;
+            max-width: 86%
+        }
+        
+        .msg.user {
+            background: #e6f3ff;
+            margin-left: auto
+        }
+        
+        .msg.ai {
+            background: #f1f5f9
+        }
+        
+        .chat-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px
+        }
+        
+        .forecast {
+            display: flex;
+            gap: 8px;
+            overflow: auto;
+            padding-bottom: 6px
+        }
+        
+        .day {
+            min-width: 110px;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center
+        }
+        
+        .footer-small {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 10px
+        }
+        
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center
+        }
+        
+        @media (max-width:980px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .chat {
+                height: 420px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <h1>🌤 AI Weather — Full (Chat, Voice, Images, Forecast)</h1>
+            <div class="small">Local testing: API keys are embedded (not for public deployment)</div>
+        </header>
+
+        <div class="grid">
+            <!-- LEFT: Weather + Forecast + Controls -->
+            <div class="column">
+                <div class="search-row">
+                    <input id="cityInput" type="text" placeholder="Enter city (e.g., Patna or New Delhi)" />
+                    <button id="searchBtn">Search</button>
+                    <button id="locBtn" title="Use my location">📍</button>
+                </div>
+
+                <div id="mainInfo" class="info small"></div>
+
+                <div style="margin-top:12px" class="two-col">
+                    <div id="currentCard" class="card-small">
+                        <div id="curCity"><b>—</b></div>
+                        <div id="curTemp" style="font-size:22px;margin-top:6px">—</div>
+                        <div id="curDesc" class="small">—</div>
+                        <div style="margin-top:6px" class="small">Humidity: <span id="curHum">—</span></div>
+                        <div class="small">Wind: <span id="curWind">—</span></div>
+                    </div>
+
+                    <div class="card-small">
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <div><b>AI Advice</b>
+                                <div class="small">Quick tips from AI</div>
+                            </div>
+                            <div><button id="speakAI">🔊 Speak</button></div>
+                        </div>
+                        <div id="aiAdvice" style="margin-top:10px" class="small">—</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:12px">
+                    <b>7-Day Forecast</b>
+                    <div id="forecast" class="forecast" style="margin-top:8px"></div>
+                </div>
+
+                <div style="margin-top:12px" class="row">
+                    <button id="generateIcon">Generate Icon (AI)</button>
+                    <button id="saveSnap">📄 Save Snapshot</button>
+                    <button id="copySnap">Copy Snapshot</button>
+                    <div style="margin-left:auto" class="small">Status: <span id="status">idle</span></div>
+                </div>
+
+                <div class="footer-small">
+                    <br> ⚠ Note: Direct browser calls expose API keys & may face CORS from OpenAI. Recommended: move to backend for production.
+                </div>
+            </div>
+
+            <!-- RIGHT: Chatbot and Images -->
+            <div class="column">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <b>AI Chatbot — Ask about the weather</b>
+                    <div class="small">Model: gpt-4o-mini (chat)</div>
+                </div>
+
+                <div class="chat">
+                    <div id="chatMessages" class="chat-messages"></div>
+
+                    <div style="margin-top:8px">
+                        <div class="chat-controls">
+                            <input id="chatInput" type="text" placeholder="Ask: What should I wear? carry umbrella?" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6edf3" />
+                            <button id="sendChat">Send</button>
+                            <button id="speakLast">🔊 Read</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:8px">
+                        <b>AI Image</b>
+                        <div class="small">Generate a weather icon based on current conditions</div>
+                        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+                            <input id="imgPrompt" type="text" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6edf3" placeholder="Prompt for icon (optional)" />
+                            <button id="genImgBtn">Generate</button>
+                        </div>
+                        <div id="imageBox" style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /*
+                                                  FULL AI WEATHER single-file.
+                                                  Keys below were provided by you in earlier messages.
+                                                  WARNING: Using keys in client-side JS exposes them publicly. For production, create a backend proxy.
+                                                */
+
+        const OPENWEATHER_KEY = "e07f58bd102efde10b77a737ade6d7fb"; // your OpenWeather key
+        const OPENAI_KEY = "939e96d1558ce56eb6fb345bebe5483b"; // your OpenAI key
+
+        // --- Basic UI refs
+        const cityInput = document.getElementById('cityInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const locBtn = document.getElementById('locBtn');
+        const mainInfo = document.getElementById('mainInfo');
+        const curCity = document.getElementById('curCity');
+        const curTemp = document.getElementById('curTemp');
+        const curDesc = document.getElementById('curDesc');
+        const curHum = document.getElementById('curHum');
+        const curWind = document.getElementById('curWind');
+        const forecastEl = document.getElementById('forecast');
+        const statusEl = document.getElementById('status');
+        const aiAdviceEl = document.getElementById('aiAdvice');
+        const speakAIbtn = document.getElementById('speakAI');
+
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendChat = document.getElementById('sendChat');
+        const speakLast = document.getElementById('speakLast');
+
+        const genImgBtn = document.getElementById('genImgBtn');
+        const imageBox = document.getElementById('imageBox');
+        const imgPrompt = document.getElementById('imgPrompt');
+
+        const saveSnap = document.getElementById('saveSnap');
+        const copySnap = document.getElementById('copySnap');
+
+        let lastWeather = null;
+        let chatHistory = [];
+
+        // UTIL
+        function setStatus(s) {
+            statusEl.textContent = s;
+        }
+
+        function formatDate(ts) {
+            const d = new Date(ts * 1000);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+        }
+
+        function speak(text) {
+            if (!('speechSynthesis' in window)) return alert('Speech synthesis not available in this browser.');
+            const u = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(u);
+        }
+
+        // --- Weather fetch (current + onecall forecast)
+        async function fetchWeatherByCity(city) {
+            try {
+                setStatus('fetching current weather...');
+                const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${OPENWEATHER_KEY}&units=metric`;
+                const r = await fetch(url);
+                const d = await r.json();
+                if (d.cod && d.cod == 404) {
+                    setStatus('city not found');
+                    mainInfo.innerHTML = '<b>City not found</b>';
+                    return;
+                }
+                // get lat lon
+                const {
+                    coord
+                } = d;
+                await fetchOneCall(coord.lat, coord.lon, d);
+            } catch (e) {
+                console.error(e);
+                setStatus('error fetching weather');
+                mainInfo.innerHTML = '<span style="color:#b91c1c">Error fetching weather</span>';
+            }
+        }
+
+        async function fetchOneCall(lat, lon, currentObj = null) {
+            try {
+                setStatus('fetching forecast...');
+                const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&exclude=minutely,alerts&units=metric&appid=${OPENWEATHER_KEY}`;
+                const r = await fetch(url);
+                const data = await r.json();
+                // combine currentObj (if available) to keep city name/country
+                if (currentObj) data.cityName = currentObj.name + ', ' + (currentObj.sys ? currentObj.sys.country || '' : '')
+
+                lastWeather = data;
+                renderWeather(data);
+                // ask AI for quick advice automatically
+                autoAIAdvice(data);
+                setStatus('ready');
+            } catch (e) {
+                console.error(e);
+                setStatus('error fetching forecast');
+            }
+        }
+
+        // Render UI
+        function renderWeather(data) {
+            const cName = data.cityName || 'Unknown location';
+            curCity.innerHTML = `<b>${cName}</b>`;
+            curTemp.innerText = `${Math.round(data.current.temp)}°C`;
+            curDesc.innerText = `${data.current.weather[0].description}`;
+            curHum.innerText = `${data.current.humidity}%`;
+            curWind.innerText = `${data.current.wind_speed} m/s`;
+            mainInfo.innerHTML = `<div class="small">Updated: ${formatDate(data.current.dt)}</div>`;
+
+            // 7-day forecast
+            forecastEl.innerHTML = '';
+            (data.daily || []).slice(0, 7).forEach(day => {
+                const el = document.createElement('div');
+                el.className = 'day';
+                const dt = new Date(day.dt * 1000).toLocaleDateString(undefined, {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                // OpenWeather icon (fallback if AI icon not generated)
+                const icon = day.weather[0].icon;
+                const iconUrl = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+                el.innerHTML = `<div style="font-weight:600">${dt}</div>
+      <img src="${iconUrl}" alt="" style="width:64px;height:64px"/>
+      <div style="margin-top:6px">${Math.round(day.temp.day)}°C</div>
+      <div class="small">${day.weather[0].main}</div>`;
+                forecastEl.appendChild(el);
+            });
+        }
+
+        // --- AI Advice (automatic short advice)
+        async function autoAIAdvice(weather) {
+            try {
+                aiAdviceEl.innerHTML = 'Thinking...';
+                const prompt = `You are a helpful assistant. Give short (2-3 lines) everyday advice in Hinglish for a user, based on current weather:
+City: ${weather.cityName || 'unknown'}
+Current: ${weather.current.weather[0].description}, temp ${weather.current.temp}°C, humidity ${weather.current.humidity}%
+Provide: clothing suggestion, whether to carry umbrella, any health tip.`;
+                const aiResp = await openaiChat([{
+                    role: 'user',
+                    content: prompt
+                }]);
+                aiAdviceEl.innerHTML = aiResp.replace(/\n/g, '<br>');
+            } catch (e) {
+                console.error(e);
+                aiAdviceEl.innerHTML = 'AI advice unavailable';
+            }
+        }
+
+        // --- OPENAI Chat completion (browser call)
+        async function openaiChat(messages) {
+            // messages: array of {role, content}
+            setStatus('calling OpenAI (chat)...');
+            try {
+                const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o-mini", // recommended chat model from earlier examples
+                        messages: messages,
+                        max_tokens: 400,
+                        temperature: 0.7
+                    })
+                });
+                const j = await resp.json();
+                if (j.error) {
+                    console.error('OpenAI error', j);
+                    setStatus('OpenAI error');
+                    return 'AI error: ' + (j.error.message || 'unknown');
+                }
+                const text = j.choices[0].message.content;
+                setStatus('ready');
+                return text;
+            } catch (err) {
+                console.error(err);
+                setStatus('OpenAI fetch error — possible CORS or network block');
+                return 'AI unavailable (CORS or network). For production push calls to backend.';
+            }
+        }
+
+        // --- Chat UI actions
+        function pushChat(role, text) {
+            chatHistory.push({
+                role,
+                text,
+                t: Date.now()
+            });
+            const div = document.createElement('div');
+            div.className = 'msg ' + (role === 'user' ? 'user' : 'ai');
+            div.innerHTML = `<div style="font-size:13px">${text}</div><div class="small" style="margin-top:6px">${new Date().toLocaleTimeString()}</div>`;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        sendChat.addEventListener('click', async() => {
+            const q = chatInput.value.trim();
+            if (!q) return;
+            pushChat('user', q);
+            chatInput.value = '';
+            // create messages with system + context
+            const system = {
+                role: 'system',
+                content: 'You are a helpful assistant who explains weather and gives practical advice in Hinglish & short answers.'
+            };
+            // include short weather summary if available
+            let context = '';
+            if (lastWeather) {
+                const s = lastWeather;
+                context = `Current weather: ${s.cityName||''} - ${s.current.weather[0].description}, temp ${s.current.temp}°C, humidity ${s.current.humidity}%.`;
+            }
+            const messages = [system];
+            if (context) messages.push({
+                role: 'user',
+                content: context
+            });
+            messages.push({
+                role: 'user',
+                content: q
+            });
+            pushChat('ai', 'Thinking...');
+            const ai = await openaiChat(messages);
+            // remove last thinking message and replace
+            const msgs = chatMessages.querySelectorAll('.msg.ai');
+            if (msgs.length) msgs[msgs.length - 1].querySelector('div').innerHTML = ai;
+        });
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendChat.click();
+        });
+
+        // --- Generate AI Image (icon). Falls back to OpenWeather icon if images not available.
+        genImgBtn.addEventListener('click', async() => {
+            if (!lastWeather) {
+                alert('Search a city first');
+                return;
+            }
+            imageBox.innerHTML = 'Generating icon...';
+            const promptUser = imgPrompt.value.trim();
+            const w = lastWeather;
+            const basePrompt = `Create a simple flat minimal vector-style weather icon representing "${w.current.weather[0].description}" and temp ${Math.round(w.current.temp)}°C. Focus on clarity at small sizes, white background, no text.`;
+            const prompt = promptUser ? promptUser + ' — ' + basePrompt : basePrompt;
+            try {
+                // call OpenAI image API (may be restricted / CORS)
+                const resp = await fetch('https://api.openai.com/v1/images/generations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-image-1",
+                        prompt: prompt,
+                        size: "512x512",
+                        n: 1
+                    })
+                });
+                const j = await resp.json();
+                if (j.error) {
+                    throw new Error(j.error.message || 'image error');
+                }
+                // new image data format may vary; handle either data[0].b64_json or data[0].url
+                imageBox.innerHTML = '';
+                if (j.data && j.data[0].b64_json) {
+                    const img = new Image();
+                    img.src = 'data:image/png;base64,' + j.data[0].b64_json;
+                    img.style.width = '120px';
+                    img.style.height = '120px';
+                    imageBox.appendChild(img);
+                } else if (j.data && j.data[0].url) {
+                    const img = new Image();
+                    img.src = j.data[0].url;
+                    img.style.width = '120px';
+                    img.style.height = '120px';
+                    imageBox.appendChild(img);
+                } else {
+                    imageBox.innerHTML = '<div class="small">Image API returned no usable url (check response)</div>';
+                    console.log('image response', j);
+                }
+            } catch (err) {
+                console.error('Image generation failed', err);
+                imageBox.innerHTML = '<div class="small">AI image failed (CORS or quota). Using OpenWeather icon as fallback.</div>';
+                // show fallback icon (current)
+                if (lastWeather) {
+                    const icon = lastWeather.current.weather[0].icon;
+                    const url = `https://openweathermap.org/img/wn/${icon}@4x.png`;
+                    imageBox.innerHTML = `<img src="${url}" style="width:120px;height:120px">`;
+                }
+            }
+        });
+
+        // --- Speak AI Advice
+        speakAIbtn.addEventListener('click', () => {
+            if (!aiAdviceEl.innerText || aiAdviceEl.innerText.trim() === '—') {
+                alert('No AI advice yet');
+                return;
+            }
+            speak(aiAdviceEl.innerText);
+        });
+
+        // speak last AI message in chat
+        speakLast.addEventListener('click', () => {
+            const ais = chatMessages.querySelectorAll('.msg.ai');
+            if (!ais.length) return alert('No AI chat message yet');
+            const last = ais[ais.length - 1].innerText;
+            speak(last.replace(/\n/g, ' '));
+        });
+
+        // --- snapshot functions
+        saveSnap.addEventListener('click', () => {
+            if (!lastWeather) {
+                alert('Search first');
+                return;
+            }
+            const snap = createSnapshotText();
+            // download as file
+            const blob = new Blob([snap], {
+                type: 'text/plain'
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `weather_snapshot_${Date.now()}.txt`;
+            a.click();
+        });
+        copySnap.addEventListener('click', async() => {
+            if (!lastWeather) {
+                alert('Search first');
+                return;
+            }
+            const snap = createSnapshotText();
+            await navigator.clipboard.writeText(snap);
+            alert('Snapshot copied to clipboard');
+        });
+
+        function createSnapshotText() {
+            const w = lastWeather;
+            let s = `Snapshot: ${w.cityName || ''}\nUpdated: ${formatDate(w.current.dt)}\nTemp: ${w.current.temp}°C\nDesc: ${w.current.weather[0].description}\nHumidity: ${w.current.humidity}%\nWind: ${w.current.wind_speed} m/s\n\n7-day:\n`;
+            (w.daily || []).slice(0, 7).forEach(d => {
+                s += `${new Date(d.dt*1000).toLocaleDateString()}: ${Math.round(d.temp.day)}°C, ${d.weather[0].description}\n`;
+            });
+            return s;
+        }
+
+        // --- Search button + location button
+        searchBtn.addEventListener('click', () => {
+            const q = cityInput.value.trim();
+            if (!q) return alert('Enter a city');
+            fetchWeatherByCity(q);
+        });
+        locBtn.addEventListener('click', () => {
+            if (!navigator.geolocation) return alert('Geolocation not supported');
+            setStatus('getting location...');
+            navigator.geolocation.getCurrentPosition(async(pos) => {
+                setStatus('fetching weather for your location...');
+                await fetchOneCall(pos.coords.latitude, pos.coords.longitude);
+            }, (err) => {
+                alert('Location error: ' + err.message);
+                setStatus('location denied');
+            });
+        });
+
+        // quick enter key
+        cityInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') searchBtn.click();
+        });
+
+        // --- On load, prefill with a city
+        window.addEventListener('load', () => {
+            cityInput.value = 'Patna';
+            fetchWeatherByCity('Patna');
+        });
+
+        /* 
+          IMPORTANT NOTES FOR PRODUCTION:
+          1) Do NOT call OpenAI or other secret-key endpoints from client-side in production.
+             Instead: create a small backend endpoint (eg /api/openai) that holds OPENAI_KEY on server,
+             forward user requests (chat, image) to OpenAI from server, and return responses to the client.
+          2) OpenAI endpoints may block browser calls via CORS — if you see CORS errors, use a server proxy.
+          3) Rate limits & billing: monitor usage of your OPENAI_KEY.
+        */
+    </script>
+</body>
+
+</html>
